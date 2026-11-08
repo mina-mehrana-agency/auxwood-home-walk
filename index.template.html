@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>آکس چوب | پروژه AUX493</title>
+    <link rel="icon" href="data:," />
+    <link rel="preload" as="font" type="font/woff2" href="fonts/vazirmatn.woff2" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'Vazirmatn';
+        src: url('fonts/vazirmatn.woff2') format('woff2');
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+      }
+
+      /* One long scroll drives a single walk through the home. */
+      :root {
+        color-scheme: dark;
+        --ink: #fff;
+        --night: #1b1c1e;
+        --body: IRANSans, 'Vazirmatn', Tahoma, system-ui, sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: auto;
+      }
+
+      body {
+        margin: 0;
+        background: var(--night);
+        color: var(--ink);
+        font-family: var(--body);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .topbar {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px clamp(16px, 4vw, 48px);
+        pointer-events: none;
+      }
+
+      .topbar > * {
+        pointer-events: auto;
+        white-space: nowrap;
+      }
+
+      .brand,
+      .code {
+        padding: 9px 18px;
+        border: 1px solid rgb(255 255 255 / 0.55);
+        border-radius: 999px;
+        background: rgb(27 28 30 / 0.55);
+        text-decoration: none;
+        backdrop-filter: blur(8px);
+      }
+
+      .brand {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .code {
+        font-size: 14px;
+        transition: background 0.2s ease;
+      }
+
+      .code:hover {
+        background: rgb(27 28 30 / 0.72);
+      }
+
+      .film {
+        position: relative;
+        height: 900vh;
+      }
+
+      .film__stage {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100svh;
+        overflow: hidden;
+        /* The first picture lives in the page, so it paints with the page; the film sits on top. */
+        background: var(--night) url('__POSTER__') center / cover no-repeat;
+      }
+
+      .film__canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        visibility: hidden;
+      }
+
+      .film__canvas.is-ready {
+        visibility: visible;
+      }
+
+      .beat {
+        position: absolute;
+        z-index: 2;
+        right: clamp(16px, 5vw, 72px);
+        bottom: clamp(28px, 7vh, 72px);
+        max-width: min(620px, calc(100% - 32px));
+        opacity: 0;
+        will-change: transform, opacity;
+        text-shadow: 0 2px 20px rgb(0 0 0 / 0.7);
+      }
+
+      .beat[data-start='0'] {
+        opacity: 1;
+      }
+
+      .beat::before {
+        content: '';
+        position: absolute;
+        inset: -46px -72px;
+        z-index: -1;
+        background: radial-gradient(closest-side, rgb(15 15 17 / 0.62), rgb(15 15 17 / 0.36) 58%, rgb(15 15 17 / 0));
+      }
+
+      .beat h1,
+      .beat h2 {
+        margin: 0;
+        font-weight: 700;
+        line-height: 1.35;
+        text-wrap: balance;
+      }
+
+      .beat h1 {
+        font-size: clamp(24px, 3.4vw, 46px);
+      }
+
+      .beat h2 {
+        font-size: clamp(24px, 3vw, 40px);
+      }
+
+      .hint {
+        position: absolute;
+        z-index: 2;
+        bottom: 22px;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        margin: 0 0 0 -22px;
+        border-radius: 50%;
+        background: rgb(20 20 22 / 0.5);
+        animation: nudge 1.5s ease-in-out infinite;
+      }
+
+      .hint svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      @keyframes nudge {
+        50% {
+          transform: translateY(7px);
+        }
+      }
+
+      .progress {
+        position: absolute;
+        z-index: 3;
+        inset: auto 0 0;
+        height: 2px;
+        background: #fff;
+        transform-origin: right;
+        transform: scaleX(0);
+      }
+
+      .footer {
+        padding: 32px clamp(16px, 4vw, 48px);
+        text-align: center;
+        font-size: 14px;
+        opacity: 0.75;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hint {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar" id="topbar">
+      <a class="brand" href="https://auxwood.com/">آکس چوب</a>
+      <a class="code" href="https://auxwood.com/projects/%d9%be%d8%b1%d9%88%da%98%d9%87-aux493/" dir="ltr">AUX493 : کد پروژه</a>
+    </header>
+
+    <main>
+      <section class="film" id="film" aria-label="گشتی در خانهٔ پروژهٔ AUX493 آکس چوب">
+        <div class="film__stage">
+          <video class="film__canvas" id="film-video" src="film-lite.mp4" muted playsinline preload="auto" tabindex="-1" aria-label="حرکت دوربین از میز ناهارخوری تا کافی‌بار، بوفه، آشپزخانه، اتاق خواب و کمد دیواری"></video>
+
+          <div class="beat" data-start="0" data-end="0.08"><h1>آکس چوب تولیدکننده انواع کابینت منحنی، مدرن و کلاسیک</h1></div>
+__BEATS__
+          <div class="hint" id="hint" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M14 19l8 8 8-8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
+          <div class="progress" id="progress"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">آکس چوب</footer>
+    <script src="scroll-film.js" defer></script>
+  </body>
+</html>
