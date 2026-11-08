@@ -32,7 +32,8 @@ def main():
     subprocess.run(['ffmpeg', '-v', 'error', '-y', *args, '-filter_complex', ';'.join(chain), '-map', label, '-r', '24',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '12', '-pix_fmt', 'yuv420p', '-an', 'source/joined.mp4'], check=True)
 
-    common = ['-c:v', 'libx264', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-an', '-sc_threshold', '0', '-movflags', '+faststart']
+    # No B-frames and a single reference frame: every scroll movement is a seek, and with x264's defaults seeks take so long the film stops.
+    common = ['-c:v', 'libx264', '-preset', 'slow', '-bf', '0', '-refs', '1', '-pix_fmt', 'yuv420p', '-an', '-sc_threshold', '0', '-movflags', '+faststart']
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'source/joined.mp4', '-vf', 'scale=1280:720:flags=lanczos', '-crf', '29',
                     '-g', '6', '-keyint_min', '6', *common, 'film-lite.mp4'], check=True)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'source/joined.mp4', '-vf', 'unsharp=5:5:0.4', '-crf', '25',
