@@ -1,9 +1,12 @@
-// Plays one camera move with the scrollbar. Scrolling works from the first moment: a light
+// Plays one camera move with the scrollbar. Scrolling works from the first moment: a very light
 // film streams straight away, and if someone scrolls ahead of the download the picture eases
-// along behind them. On larger screens the 1080p film downloads quietly in the background
-// and takes over from the same spot once all of it has arrived.
+// along behind them. Better films then download quietly in the background, each taking over
+// from the same spot once all of it has arrived: 720p everywhere, 1080p on larger screens.
 
-const FULL_FILM = 'film.mp4'; // 1080p.
+const FILM_720 = 'film-lite.mp4';
+const FILM_1080 = 'film.mp4';
+const SLOW_SEEK_MS = 60; // A machine seeking slower than this stays on 720p, where it stays smooth.
+const SEEK_SAMPLES = 12; // Seeks measured before judging.
 const SMOOTHING = 0.12; // Share of the remaining distance covered per frame.
 const SEEK_STEP = 1 / 30; // Smallest change in seconds worth a new seek.
 const BUFFER_MARGIN = 0.6; // Seconds kept back from the end of the downloaded part.
@@ -33,6 +36,9 @@ const state = {
   raf: 0,
   bufferEnd: 0,
   bufferMoved: 0,
+  seekStarted: 0,
+  seekTotal: 0,
+  seekCount: 0,
 };
 
 const once = (target, event) => new Promise((resolve) => target.addEventListener(event, resolve, { once: true }));
@@ -87,7 +93,10 @@ function tick(now) {
 
   const { video } = state;
   const gap = Math.abs(video.currentTime - state.position);
-  if (!video.seeking && gap >= SEEK_STEP) video.currentTime = state.position;
+  if (!video.seeking && gap >= SEEK_STEP) {
+    state.seekStarted = now;
+    video.currentTime = state.position;
+  }
   poseCaptions(state.position / state.duration);
 
   const done = state.position === state.target && !video.seeking && gap < SEEK_STEP;
@@ -125,37 +134,73 @@ async function waitForLiteFilm() {
   }
 }
 
-// Brings in the 1080p film behind the light one, lines it up, then shows it.
-async function upgradeFilm() {
-  if (!largeScreen || navigator.connection?.saveData) return;
-  await waitForLiteFilm();
+function measureSeeks(video) {
+  video.addEventListener('seeked', () => {
+    if (!state.seekStarted || state.video !== video) return;
+    state.seekTotal += performance.now() - state.seekStarted;
+    state.seekCount += 1;
+    state.seekStarted = 0;
+    film.dataset.seekMs = String(Math.round(state.seekTotal / state.seekCount));
+  });
+}
 
-  const response = await fetch(FULL_FILM);
-  if (!response.ok) return;
+const seeksAreSlow = () => state.seekCount >= SEEK_SAMPLES && state.seekTotal / state.seekCount > SLOW_SEEK_MS;
+
+// Brings in a better film behind the current one, lines it up, then shows it.
+async function swapTo(url) {
+  const response = await fetch(url);
+  if (!response.ok) return false;
   const blob = await response.blob();
 
-  const fullVideo = liteVideo.cloneNode(false);
-  fullVideo.removeAttribute('id');
-  fullVideo.removeAttribute('src');
-  fullVideo.classList.remove('is-ready');
-  fullVideo.setAttribute('aria-hidden', 'true');
-  fullVideo.src = URL.createObjectURL(blob);
-  liteVideo.after(fullVideo);
+  const next = liteVideo.cloneNode(false);
+  next.removeAttribute('id');
+  next.removeAttribute('src');
+  next.classList.remove('is-ready');
+  next.setAttribute('aria-hidden', 'true');
+  next.src = URL.createObjectURL(blob);
+  state.video.after(next);
 
-  await once(fullVideo, 'loadeddata');
-  fullVideo.currentTime = state.position;
-  await once(fullVideo, 'seeked');
+  await once(next, 'loadeddata');
+  next.currentTime = state.position;
+  await once(next, 'seeked');
 
-  fullVideo.classList.add('is-ready');
-  state.video = fullVideo;
+  const previous = state.video;
+  next.classList.add('is-ready');
+  state.video = next;
   state.inMemory = true;
+  state.seekTotal = 0;
+  state.seekCount = 0;
+  measureSeeks(next);
+  film.dataset.quality = url;
   handleScroll();
+
+  // The film it replaced is no longer needed; the streaming one stays as the fallback.
+  if (previous !== liteVideo) {
+    URL.revokeObjectURL(previous.src);
+    previous.remove();
+  }
+  return true;
+}
+
+async function upgradeFilm() {
+  const { connection } = navigator;
+  if (connection?.saveData || /2g/.test(connection?.effectiveType ?? '')) return;
+  await waitForLiteFilm();
+
+  if (!(await swapTo(FILM_720)) || !largeScreen) return;
+  // Give the 720p film a chance to show how this machine copes before asking more of it.
+  const started = performance.now();
+  while (state.seekCount < SEEK_SAMPLES && performance.now() - started < 20000) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (!seeksAreSlow()) await swapTo(FILM_1080);
 }
 
 window.addEventListener('scroll', handleScroll, { passive: true });
 window.addEventListener('resize', handleScroll);
 window.addEventListener('touchstart', wakeVideo, { once: true, passive: true });
 
+measureSeeks(liteVideo);
 if (liteVideo.readyState >= 2) ready();
 else liteVideo.addEventListener('loadeddata', ready, { once: true });
 
